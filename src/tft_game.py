@@ -250,9 +250,20 @@ class TFTApp:
 
     def _bind_keys(self) -> None:
         self.root.bind("<Escape>", lambda e: self.root.quit())
-        self.root.bind("<F1>", lambda e: self._demo_boost())
-        self.root.bind("<F2>", lambda e: self._demo_next_phase())
-        self.root.bind("<F3>", lambda e: self._demo_auto_script())
+
+        # macOS often maps F1–F12 to brightness/volume; use Ctrl+1/2/3 as reliable alternates.
+        def bind_demo(keys: tuple[str, ...], fn) -> None:
+            def handler(_event: tk.Event | None = None) -> str:
+                fn()
+                return "break"
+
+            for key in keys:
+                self.root.bind(key, handler)
+                self.log.bind(key, handler)
+
+        bind_demo(("<F1>", "<Control-Key-1>"), self._demo_boost)
+        bind_demo(("<F2>", "<Control-Key-2>"), self._demo_next_phase)
+        bind_demo(("<F3>", "<Control-Key-3>"), self._demo_auto_script)
 
     def _new_run(self) -> None:
         self.state = start_new_run()
@@ -293,7 +304,7 @@ class TFTApp:
         self.log.delete("1.0", tk.END)
         self.log.insert(
             tk.END,
-            "Demo Boost activated (F1): +30 gold, XP boost, demo items, and augment choices (if available).\n",
+            "Demo Boost (F1 or Ctrl+1): +30 gold, XP boost, demo items, and augment choices (if available).\n",
         )
         self._refresh_all()
 
@@ -303,14 +314,14 @@ class TFTApp:
         # Teacher demo helper: quickly advance phase timer.
         self.phase_seconds_left = 1
         self.log.delete("1.0", tk.END)
-        self.log.insert(tk.END, "Demo Next Phase activated (F2): timer will switch phase on next tick.\n")
+        self.log.insert(tk.END, "Demo Next Phase (F2 or Ctrl+2): timer will switch phase on next tick.\n")
         self._refresh_all()
 
     def _demo_auto_script(self) -> None:
         if self.state.game_over:
             return
         self._demo_boost()
-        notes: list[str] = ["Demo Auto Script (F3) started."]
+        notes: list[str] = ["Demo Auto Script (F3 or Ctrl+3) started."]
 
         # 1) Buy up to 3 affordable units from shop.
         buys = 0
@@ -677,7 +688,10 @@ class TFTApp:
 
     def _draw_phase_bar(self) -> None:
         self.phase_label.config(
-            text=f"Phase: {self.phase} | {self.phase_seconds_left}s | F1 Demo Boost | F2 Next Phase | F3 Auto Demo"
+            text=(
+                f"Phase: {self.phase} | {self.phase_seconds_left}s | "
+                "Demo: F1/Ctrl+1 Boost | F2/Ctrl+2 Next | F3/Ctrl+3 Auto"
+            )
         )
         self.phase_bar.delete("all")
         width = 560

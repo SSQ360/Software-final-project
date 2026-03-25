@@ -13,7 +13,7 @@ You play a simplified TFT-style loop: **Planning** (buy and place units, roll th
 - **Items** (base components and combined items) boost attack and HP. **Augments** are pick-one bonuses that change economy or combat.
 - **Opponents** are bots with their own HP. When your HP hits zero, the run ends. The game computes a **final score** and tracks a **local best score** in `data/tft_highscores.json`.
 
-The UI is built with **Tkinter** (`window title: COMP2116 — TFT Style Auto-Battler`). Use **F1 / F2 / F3** during demos or grading (see below).
+The UI is built with **Tkinter** (`window title: COMP2116 — TFT Style Auto-Battler`). Use **F1 / F2 / F3**, or **Ctrl+1 / Ctrl+2 / Ctrl+3** (recommended on macOS, where F-keys often control brightness/volume) during demos or grading (see below).
 
 ## Requirements
 
@@ -40,9 +40,11 @@ On first run, a high-score file may be created under `data/tft_highscores.json` 
 
 ## Demo / grading shortcuts (in-game)
 
-- **F1** — Demo boost (for presentation)
-- **F2** — Advance phase
-- **F3** — Auto demo script
+- **F1** or **Ctrl+1** — Demo boost (for presentation)
+- **F2** or **Ctrl+2** — Advance phase
+- **F3** or **Ctrl+3** — Auto demo script
+
+On macOS, if F-keys adjust screen brightness instead, either use the **Ctrl+number** shortcuts above, or enable **System Settings → Keyboard → “Use F1, F2, etc. keys as standard function keys”** (then you may need **Fn+F1** on some keyboards).
 
 ## Tests
 
