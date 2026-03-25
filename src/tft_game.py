@@ -1,3 +1,4 @@
+import math
 import sys
 from collections import Counter
 import tkinter as tk
@@ -32,7 +33,14 @@ from tft_engine import (
 )
 
 HIGH_PATH = _ROOT / "data" / "tft_highscores.json"
-COST_COLORS = {1: "#f0f0f0", 2: "#7CFC9A", 3: "#73B9FF"}
+TRAIT_COLORS = {
+    Trait.BRUISER: "#9AD89A",
+    Trait.ARCANIST: "#C7A8FF",
+    Trait.SNIPER: "#8ED2FF",
+}
+PANEL_BG = "#111A2E"
+ROOT_BG = "#0A1222"
+CARD_BG = "#17233D"
 ITEM_ABBR = {
     Item.BLADE: "Bd",
     Item.ARMOR: "Ar",
@@ -47,6 +55,18 @@ ITEM_ABBR = {
 }
 
 
+def _cost_badge(cost: int) -> str:
+    return {1: "①", 2: "②", 3: "③"}.get(cost, "?")
+
+
+def _flat_hex_points(cx: float, cy: float, r: float) -> list[float]:
+    pts: list[float] = []
+    for i in range(6):
+        a = math.pi / 6 + i * math.pi / 3
+        pts.extend([cx + r * math.cos(a), cy + r * math.sin(a)])
+    return pts
+
+
 class TFTApp:
     def __init__(self) -> None:
         self.state = start_new_run()
@@ -59,96 +79,163 @@ class TFTApp:
 
         self.root = tk.Tk()
         self.root.title("COMP2116 — TFT Style Auto-Battler")
-        self.root.configure(bg="#0b1220")
+        self.root.configure(bg=ROOT_BG)
 
-        top = tk.Frame(self.root, bg="#0b1220")
+        top = tk.Frame(self.root, bg=ROOT_BG)
         top.pack(fill=tk.X, padx=10, pady=8)
 
-        self.lbl_hp = tk.Label(top, text="", fg="#eaeaea", bg="#0b1220", font=("Helvetica", 13, "bold"))
+        self.lbl_hp = tk.Label(top, text="", fg="#eaeaea", bg=ROOT_BG, font=("Helvetica", 13, "bold"))
         self.lbl_hp.pack(side=tk.LEFT, padx=6)
-        self.lbl_gold = tk.Label(top, text="", fg="#f8d93b", bg="#0b1220", font=("Helvetica", 13, "bold"))
+        self.lbl_gold = tk.Label(top, text="", fg="#f8d93b", bg=ROOT_BG, font=("Helvetica", 13, "bold"))
         self.lbl_gold.pack(side=tk.LEFT, padx=6)
-        self.lbl_level = tk.Label(top, text="", fg="#ffd39b", bg="#0b1220", font=("Helvetica", 13, "bold"))
+        self.lbl_level = tk.Label(top, text="", fg="#ffd39b", bg=ROOT_BG, font=("Helvetica", 13, "bold"))
         self.lbl_level.pack(side=tk.LEFT, padx=6)
-        self.lbl_round = tk.Label(top, text="", fg="#9be7ff", bg="#0b1220", font=("Helvetica", 13, "bold"))
+        self.lbl_round = tk.Label(top, text="", fg="#9be7ff", bg=ROOT_BG, font=("Helvetica", 13, "bold"))
         self.lbl_round.pack(side=tk.LEFT, padx=6)
-        self.lbl_best = tk.Label(top, text="", fg="#7CFFB2", bg="#0b1220", font=("Helvetica", 13, "bold"))
+        self.lbl_best = tk.Label(top, text="", fg="#7CFFB2", bg=ROOT_BG, font=("Helvetica", 13, "bold"))
         self.lbl_best.pack(side=tk.LEFT, padx=6)
-        self.lbl_streak = tk.Label(top, text="", fg="#ffb7c5", bg="#0b1220", font=("Helvetica", 13, "bold"))
+        self.lbl_streak = tk.Label(top, text="", fg="#ffb7c5", bg=ROOT_BG, font=("Helvetica", 13, "bold"))
         self.lbl_streak.pack(side=tk.LEFT, padx=6)
 
-        self.syn_label = tk.Label(self.root, text="", fg="#bbbbbb", bg="#0b1220", font=("Helvetica", 11))
+        self.syn_label = tk.Label(self.root, text="", fg="#D8E8FF", bg=ROOT_BG, font=("Helvetica", 11, "bold"))
         self.syn_label.pack(fill=tk.X, padx=12)
 
-        ctrl = tk.Frame(self.root, bg="#0b1220")
+        ctrl = tk.Frame(self.root, bg=ROOT_BG)
         ctrl.pack(fill=tk.X, padx=10)
-        tk.Button(ctrl, text="New run", command=self._new_run, width=10).pack(side=tk.LEFT, padx=4)
-        tk.Button(ctrl, text="Reroll (2g)", command=self._do_reroll, width=12).pack(side=tk.LEFT, padx=4)
-        tk.Button(ctrl, text="Buy XP (4g)", command=self._do_buy_xp, width=12).pack(side=tk.LEFT, padx=4)
-        tk.Button(ctrl, text="Battle!", command=self._do_battle, width=10).pack(side=tk.LEFT, padx=4)
-        tk.Button(ctrl, text="Sell selected", command=self._do_sell, width=12).pack(side=tk.LEFT, padx=4)
+        action_btn = {
+            "fg": "#F7F2C8",
+            "bg": "#1E2E52",
+            "activebackground": "#2A3F6D",
+            "activeforeground": "#FFF6BD",
+            "relief": tk.FLAT,
+            "bd": 0,
+            "font": ("Helvetica", 10, "bold"),
+        }
+        tk.Button(ctrl, text="New run", command=self._new_run, width=10, **action_btn).pack(side=tk.LEFT, padx=4)
+        tk.Button(ctrl, text="Reroll (2g)", command=self._do_reroll, width=12, **action_btn).pack(side=tk.LEFT, padx=4)
+        tk.Button(ctrl, text="Buy XP (4g)", command=self._do_buy_xp, width=12, **action_btn).pack(side=tk.LEFT, padx=4)
+        tk.Button(ctrl, text="Battle!", command=self._do_battle, width=10, **action_btn).pack(side=tk.LEFT, padx=4)
+        tk.Button(ctrl, text="Sell selected", command=self._do_sell, width=12, **action_btn).pack(side=tk.LEFT, padx=4)
 
-        shop_fr = tk.LabelFrame(self.root, text="Shop", fg="#eaeaea", bg="#111a2e", labelanchor="n")
+        shop_fr = tk.LabelFrame(self.root, text="Shop", fg="#F9E9A8", bg=PANEL_BG, labelanchor="n")
         shop_fr.pack(fill=tk.X, padx=10, pady=6)
         self.shop_btns: list[tk.Button] = []
         for i in range(5):
-            b = tk.Button(shop_fr, text="", width=22, command=lambda idx=i: self._buy(idx))
+            b = tk.Button(
+                shop_fr,
+                text="",
+                width=20,
+                height=4,
+                command=lambda idx=i: self._buy(idx),
+                relief=tk.FLAT,
+                bd=0,
+                font=("Helvetica", 10, "bold"),
+                wraplength=150,
+                justify="center",
+            )
             b.grid(row=0, column=i, padx=4, pady=6)
             self.shop_btns.append(b)
 
         board_fr = tk.LabelFrame(
             self.root,
             text="Board (max 6) — bench→board to place | board→bench to return",
-            fg="#eaeaea",
-            bg="#111a2e",
+            fg="#F9E9A8",
+            bg=PANEL_BG,
         )
         board_fr.pack(fill=tk.X, padx=10, pady=6)
+        board_inner = tk.Frame(board_fr, bg=PANEL_BG)
+        board_inner.pack(fill=tk.X, padx=4, pady=(2, 6))
+        self.board_canvas = tk.Canvas(
+            board_inner,
+            height=200,
+            bg="#14203A",
+            highlightthickness=0,
+        )
+        self.board_canvas.grid(row=0, column=0, rowspan=2, columnspan=3, sticky="nsew")
+        self.board_canvas.bind("<Configure>", lambda _e: self._draw_board_hex())
         self.board_btns: list[tk.Button] = []
         for r in range(2):
             for c in range(3):
                 idx = r * 3 + c
-                b = tk.Button(board_fr, text=f"-", width=18, height=4, command=lambda i=idx: self._click_board(i))
+                b = tk.Button(
+                    board_inner,
+                    text="-",
+                    width=18,
+                    height=4,
+                    command=lambda i=idx: self._click_board(i),
+                    relief=tk.FLAT,
+                    bd=0,
+                    wraplength=140,
+                )
                 b.grid(row=r, column=c, padx=4, pady=4)
                 self.board_btns.append(b)
 
-        bench_fr = tk.LabelFrame(self.root, text="Bench", fg="#eaeaea", bg="#111a2e")
+        bench_fr = tk.LabelFrame(self.root, text="Bench", fg="#F9E9A8", bg=PANEL_BG)
         bench_fr.pack(fill=tk.X, padx=10, pady=6)
         self.bench_btns: list[tk.Button] = []
         for i in range(9):
-            b = tk.Button(bench_fr, text="-", width=14, command=lambda idx=i: self._click_bench(idx))
+            b = tk.Button(
+                bench_fr,
+                text="-",
+                width=14,
+                command=lambda idx=i: self._click_bench(idx),
+                relief=tk.FLAT,
+                bd=0,
+                wraplength=120,
+            )
             b.grid(row=i // 3, column=i % 3, padx=4, pady=4)
             self.bench_btns.append(b)
 
-        item_fr = tk.LabelFrame(self.root, text="Item Bench (click item, then click a unit)", fg="#eaeaea", bg="#111a2e")
+        item_fr = tk.LabelFrame(self.root, text="Item Bench (click item, then click a unit)", fg="#F9E9A8", bg=PANEL_BG)
         item_fr.pack(fill=tk.X, padx=10, pady=6)
         self.item_btns: list[tk.Button] = []
         for i in range(6):
-            b = tk.Button(item_fr, text="-", width=12, command=lambda idx=i: self._click_item(idx))
+            b = tk.Button(
+                item_fr,
+                text="-",
+                width=12,
+                command=lambda idx=i: self._click_item(idx),
+                relief=tk.FLAT,
+                bd=0,
+                font=("Helvetica", 9, "bold"),
+            )
             b.grid(row=0, column=i, padx=4, pady=4)
             self.item_btns.append(b)
 
-        aug_fr = tk.LabelFrame(self.root, text="Augments", fg="#eaeaea", bg="#111a2e")
+        aug_fr = tk.LabelFrame(self.root, text="Augments", fg="#F9E9A8", bg=PANEL_BG)
         aug_fr.pack(fill=tk.X, padx=10, pady=6)
         self.aug_choice_btns: list[tk.Button] = []
         for i in range(3):
-            b = tk.Button(aug_fr, text=f"Choice {i+1}", width=28, command=lambda idx=i: self._choose_augment(idx))
+            b = tk.Button(
+                aug_fr,
+                text=f"Choice {i+1}",
+                width=28,
+                command=lambda idx=i: self._choose_augment(idx),
+                relief=tk.FLAT,
+                bd=0,
+                bg="#27395F",
+                fg="#E9EFFF",
+                activebackground="#395484",
+                activeforeground="#FFFFFF",
+                font=("Helvetica", 10, "bold"),
+            )
             b.grid(row=0, column=i, padx=4, pady=4)
             self.aug_choice_btns.append(b)
 
-        self.players_label = tk.Label(self.root, text="", fg="#d9f1ff", bg="#0b1220", font=("Helvetica", 11))
+        self.players_label = tk.Label(self.root, text="", fg="#d9f1ff", bg=ROOT_BG, font=("Helvetica", 11))
         self.players_label.pack(fill=tk.X, padx=12)
-        self.players_canvas = tk.Canvas(self.root, width=560, height=70, bg="#101a33", highlightthickness=0)
+        self.players_canvas = tk.Canvas(self.root, width=560, height=70, bg="#0F1A33", highlightthickness=0)
         self.players_canvas.pack(padx=12, pady=(2, 6), anchor=tk.W)
-        self.odds_label = tk.Label(self.root, text="", fg="#ffd7a8", bg="#0b1220", font=("Helvetica", 11))
+        self.odds_label = tk.Label(self.root, text="", fg="#ffd7a8", bg=ROOT_BG, font=("Helvetica", 11))
         self.odds_label.pack(fill=tk.X, padx=12)
-        self.income_label = tk.Label(self.root, text="", fg="#c7ffd8", bg="#0b1220", font=("Helvetica", 11))
+        self.income_label = tk.Label(self.root, text="", fg="#c7ffd8", bg=ROOT_BG, font=("Helvetica", 11))
         self.income_label.pack(fill=tk.X, padx=12)
-        self.phase_label = tk.Label(self.root, text="", fg="#d3d3ff", bg="#0b1220", font=("Helvetica", 11, "bold"))
+        self.phase_label = tk.Label(self.root, text="", fg="#d3d3ff", bg=ROOT_BG, font=("Helvetica", 11, "bold"))
         self.phase_label.pack(fill=tk.X, padx=12)
         self.phase_bar = tk.Canvas(self.root, width=560, height=12, bg="#1b2642", highlightthickness=0)
         self.phase_bar.pack(padx=12, pady=(2, 6), anchor=tk.W)
 
-        self.log = tk.Text(self.root, height=10, width=110, bg="#0a1020", fg="#cfe9ff")
+        self.log = tk.Text(self.root, height=10, width=110, bg="#081022", fg="#CFE9FF", insertbackground="#CFE9FF", bd=0)
         self.log.pack(padx=10, pady=8)
 
         self._bind_keys()
@@ -443,39 +530,53 @@ class TFTApp:
         for i, b in enumerate(self.shop_btns):
             key = st.shop[i] if i < len(st.shop) else ""
             if not key:
-                b.config(text="(empty)", state=tk.DISABLED, bg="#2c344d", fg="#d0d0d0")
+                b.config(text="(empty)", state=tk.DISABLED, bg="#2A3654", fg="#AFC0E6")
             else:
                 tpl = template_by_key(key)
+                cost_bg = {1: "#D9DCE6", 2: "#4FA071", 3: "#3A6FAF"}.get(tpl.cost, "#D9DCE6")
+                cost_fg = "#0D1220" if tpl.cost == 1 else "#F4F7FF"
                 b.config(
-                    text=f"{tpl.name}\n{tpl.trait.value} | {tpl.cost}g",
+                    text=f"{_cost_badge(tpl.cost)} {tpl.name}\n{tpl.trait.value}\n{tpl.cost}g",
                     state=tk.NORMAL if not st.game_over else tk.DISABLED,
-                    bg=COST_COLORS.get(tpl.cost, "#f0f0f0"),
-                    fg="#111111",
+                    bg=cost_bg,
+                    fg=cost_fg,
                 )
 
         for i, b in enumerate(self.bench_btns):
             u = st.bench[i]
             item_text = "" if u is None or not u.items else "[" + " ".join(ITEM_ABBR.get(it, "?") for it in u.items) + "]"
-            label = "-" if u is None else f"{u.name} ★{u.star}\n{u.trait.value} {item_text}"
-            bg = "#1c2744"
+            if u is None:
+                label = "-"
+            else:
+                _c = template_by_key(u.key).cost
+                label = f"{_cost_badge(_c)} {u.name} ★{u.star}\n{u.trait.value} {item_text}"
+            bg = "#1C2744" if u is None else TRAIT_COLORS.get(u.trait, CARD_BG)
+            fg = "#D5E4FF" if u is None else "#10131B"
             if self.selected == ("bench", i):
-                bg = "#2b3b63"
-            b.config(text=label, bg=bg, state=tk.NORMAL if not st.game_over else tk.DISABLED)
+                bg = "#FFD86B"
+                fg = "#111111"
+            b.config(text=label, bg=bg, fg=fg, state=tk.NORMAL if not st.game_over else tk.DISABLED)
 
         for i, b in enumerate(self.board_btns):
             u = st.board[i]
             item_text = "" if u is None or not u.items else "[" + " ".join(ITEM_ABBR.get(it, "?") for it in u.items) + "]"
-            label = "-" if u is None else f"{u.name} ★{u.star}\n{u.trait.value} {item_text}"
-            bg = "#1c2744"
+            if u is None:
+                label = "-"
+            else:
+                _c = template_by_key(u.key).cost
+                label = f"{_cost_badge(_c)} {u.name} ★{u.star}\n{u.trait.value} {item_text}"
+            bg = "#223056" if u is None else TRAIT_COLORS.get(u.trait, CARD_BG)
+            fg = "#D5E4FF" if u is None else "#10131B"
             if self.selected == ("board", i):
-                bg = "#2b3b63"
-            b.config(text=label, bg=bg, state=tk.NORMAL if not st.game_over else tk.DISABLED)
+                bg = "#FFD86B"
+                fg = "#111111"
+            b.config(text=label, bg=bg, fg=fg, state=tk.NORMAL if not st.game_over else tk.DISABLED)
 
         for i, b in enumerate(self.item_btns):
             item = st.item_bench[i]
             txt = "-" if item is None else item.value
-            bg = "#1c2744" if self.selected_item != i else "#35528a"
-            b.config(text=txt, bg=bg, state=tk.NORMAL if not st.game_over else tk.DISABLED)
+            bg = "#1C2744" if self.selected_item != i else "#4B74BF"
+            b.config(text=txt, bg=bg, fg="#EAF2FF", state=tk.NORMAL if not st.game_over else tk.DISABLED)
 
         for i, b in enumerate(self.aug_choice_btns):
             if i < len(st.pending_augment_choices):
@@ -511,6 +612,33 @@ class TFTApp:
         self.syn_label.config(text=self._synergy_text())
 
         self.root.update_idletasks()
+        self._draw_board_hex()
+
+    def _draw_board_hex(self) -> None:
+        cv = self.board_canvas
+        cv.delete("hex")
+        w = max(int(cv.winfo_width()), 1)
+        h = max(int(cv.winfo_height()), 1)
+        # Honeycomb spacing for flat-top hex with vertex radius R.
+        r = min(w / (2.65 * math.sqrt(3)), h / 3.6)
+        r = max(12.0, min(r, 44.0))
+        dx = math.sqrt(3) * r
+        dy = 1.5 * r
+        span_x = 2 * dx + dx / 2
+        ox = (w - span_x) / 2
+        oy = max(8.0, (h - (dy + 2 * r)) / 2 + 0.35 * r)
+        for row in range(2):
+            for col in range(3):
+                cx = ox + col * dx + (row % 2) * (dx / 2)
+                cy = oy + row * dy
+                pts = _flat_hex_points(cx, cy, r * 0.97)
+                cv.create_polygon(
+                    pts,
+                    outline="#B8923A",
+                    fill="#1A2D4A",
+                    width=1,
+                    tags="hex",
+                )
 
     def _cancel_phase_cycle(self) -> None:
         if self._phase_after_id is not None:
@@ -580,8 +708,9 @@ class TFTApp:
             ratio = max(0.0, min(1.0, hp / 100.0))
             fill_w = int(bar_w * ratio)
             alive = hp > 0
-            self.players_canvas.create_text(x, y0 - 2, anchor="nw", text=name, fill="#d9f1ff", font=("Helvetica", 10, "bold"))
-            self.players_canvas.create_rectangle(x, y0 + 14, x + bar_w, y0 + 14 + bar_h, fill="#22355f", outline="")
+            self.players_canvas.create_text(x, y0 - 2, anchor="nw", text=name, fill="#F0F4FF", font=("Helvetica", 10, "bold"))
+            self.players_canvas.create_rectangle(x - 2, y0 + 12, x + bar_w + 2, y0 + 14 + bar_h + 2, fill="#1D2B4B", outline="#304A7A")
+            self.players_canvas.create_rectangle(x, y0 + 14, x + bar_w, y0 + 14 + bar_h, fill="#22355F", outline="")
             color = "#66e6a8" if alive else "#666666"
             self.players_canvas.create_rectangle(x, y0 + 14, x + fill_w, y0 + 14 + bar_h, fill=color, outline="")
             hp_text = f"{hp} HP" if alive else "KO"
