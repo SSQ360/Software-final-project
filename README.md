@@ -58,25 +58,3 @@ pytest
 | `src/tft_game.py` | Tkinter UI and game loop |
 | `tests/test_tft_engine.py` | Unit tests for engine logic |
 
-## Push to GitHub (only this folder)
-
-1. On [GitHub](https://github.com/new), create a **new empty repository** (no README/license if you will push from local first).
-2. In a terminal:
-
-```bash
-cd "/path/to/tft_github_only"
-git init
-git add .
-git commit -m "Initial commit: TFT auto-battler (course project)"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-git push -u origin main
-```
-
-Replace `YOUR_USERNAME` and `YOUR_REPO_NAME` with your account and repo name. Use SSH if you prefer: `git@github.com:YOUR_USERNAME/YOUR_REPO_NAME.git`.
-
-If GitHub already created a README on the web, use `git pull origin main --rebase` once before the first push, or create an empty repo without initializing files.
-
----
-
-*Report-style documentation for grading: this README describes purpose, dependencies, how to run, tests, and repository layout.*
