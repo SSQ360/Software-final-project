@@ -1,6 +1,6 @@
 # TFT-Style Auto-Battler (COMP2116 submission)
 
-This repository contains **only** the Teamfight Tactics–style auto-battler (“金铲铲”-style) game: shop, economy, augments, items, combat, and scoring. It is **not** the Snake or Mario demos from the same local workspace.
+This repository contains **only** the Teamfight Tactics–style auto-battler game: shop, economy, augments, items, combat, and scoring. It is **not** the Snake or Mario demos from the same local workspace.
 
 ## Requirements
 
